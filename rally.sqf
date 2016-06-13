@@ -7,8 +7,19 @@
 // TODO: funtionize
 
 // Inputs
-param [0, "_unit", objNull];
-param [1, "_searchRadius", 100];
+params [["_unit", objNull], ["_searchRadius", 100]];
+if (isNull _unit) exitWith {systemChat "Not a unit"};
+
+//["error", "Not Available!", "Enemies are too close!<br/><br/>Secure the area before deploying a Rallypoint!"] call fn_display_message;
+fn_display_message = {
+	params["_errorType", "_errorLabel", "_errorText"];
+	_textColor = switch (_errorType) do {
+		case "error": {'#FF0000'};
+		case "info": {'#4DB0E2'};
+		default {'#000000'};
+	};
+	hint parseText format ["<t size='%1' color='%2'>%3</t><br/><br/>%4", _textSize, _textColor, _errorLabel, _errorText];
+};
 
 // Variables
 _safeZoneMarkerName = "westSafeZone";
@@ -25,41 +36,38 @@ _srpPos = [_unitPos select 0, _unitPos select 1, ((getPosATL _unit) select 2)];
 _safeZone = getMarkerPos _safeZoneMarkerName;
 _surface = surfaceNormal _srpPos;
 
-//["error", "Not Available!", "Enemies are too close! (100m)<br/><br/>Secure the area before deploying a Rallypoint!"] call fn_display_message;
-fn_display_message = {
-	params["_errorType", "_errorLabel", "_errorText"];
-	_textColor = switch (_errorType) do {
-		case "error": {'#FF0000'};
-		case "info": {'#4DB0E2'};
-		default: {'#000000'};
-	};
-	hint parseText format ["<t size=%1 color=%2>%3</t><br/><br/>%4", _textSize, _textColor, _errorLabel, _errorText];
-};
-
-
 // Check for nearby enemies
 _enemyArray = (getPosWorld _unit) nearEntities [["Man", "Car", "Motorcycle", "Tank"], _searchRadius];
 
 	if ({side _x == _enemySide} count _enemyArray > 0) exitWith {
-		["error", "Not Available!", "Enemies are too close! (100m)<br/><br/>Secure the area before deploying a Rallypoint!"] call fn_display_message;
+		systemChat "ERROR: Enemy too close";
+		["error", "Not Available!", "Enemies are too close!<br/><br/>Secure the area before deploying a Rallypoint!"] call fn_display_message;
 	};
 
 // Check for nearby safezone
 	if ((_unit distance _safezone) < _safeZoneDistance) exitwith {
+		systemChat "ERROR: Within safezone";	
 		["error", "Not Available!", "You are too close to main base to deploy a rallypoint!"] call fn_display_message;		
 	};
 
 // Check for player in vehicle
 	if (vehicle _unit != player) exitwith {
+		systemChat "ERROR: Within vehicle";	
 		["error", "Not Available!", "You must be on foot to deploy a rallypoint!"] call fn_display_message;				
 	};
 
 // Check for Cooldowns
-	if ((_unit == SL1) && (r1Cooldown == 1)) exitWith {
-		["error", "Not Available!", "You must wait 5 minutes after placing a rally to deploy another!"] call fn_display_message;						
+	if (_unit getVariable "SRS_Cooldown") exitWith {
+		systemChat "ERROR: On cooldown";		
+		["error", "Not Available!", "You must wait 5 minutes after placing a rally to deploy another!"] call fn_display_message;
+		_unit setVariable ["SRS_Cooldown", false, true];
 	};
-	
 
+	_unit setVariable ["SRS_Cooldown", true, true];
+	systemChat "SUCCESS: Respawn!";		
+
+	
+/*
 // If checks pass
 	
 	if (true) then {
@@ -423,3 +431,4 @@ _enemyArray = (getPosWorld _unit) nearEntities [["Man", "Car", "Motorcycle", "Ta
 			
 		};
 	};
+	*/
